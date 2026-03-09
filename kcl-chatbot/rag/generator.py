@@ -63,14 +63,28 @@ def _generate_local(query, chunks):
 
 
 def _generate_huggingface(query, chunks):
-    """Call HuggingFace Inference API (needs HUGGINGFACEHUB_API_TOKEN in .env)."""
-    from langchain_community.llms import HuggingFaceHub
-    prompt = _build_prompt(query, chunks)
-    llm = HuggingFaceHub(
-        repo_id="mistralai/Mistral-7B-Instruct-v0.2",
-        model_kwargs={"temperature": 0.3, "max_new_tokens": 512},
+    """Call HuggingFace Inference API directly."""
+    from huggingface_hub import InferenceClient
+    import os
+
+    client = InferenceClient(token=os.getenv("HUGGINGFACEHUB_API_TOKEN"))
+    
+    context_block = "\n\n---\n\n".join(
+        f"[Source: {c['page_title']}]\n{c['text']}" for c in chunks
     )
-    return llm.invoke(prompt)
+
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"Context:\n{context_block}\n\nQuestion: {query}"},
+    ]
+
+    response = client.chat_completion(
+        messages=messages,
+        model="HuggingFaceH4/zephyr-7b-beta",
+        max_tokens=512,
+        temperature=0.3,
+    )
+    return response.choices[0].message.content
 
 
 def _generate_openai(query, chunks):
