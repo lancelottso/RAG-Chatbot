@@ -75,6 +75,36 @@ def load_faiss_index(index_path=FAISS_INDEX_PATH):
     print(f"Loaded FAISS index ({_index.ntotal} vectors) and {len(_chunks)} chunks")
     return _index, _chunks
 
+def _expand_query(query):
+    """Add synonyms and related terms to improve retrieval."""
+    expansions = {
+        "extenuating circumstances": "mitigating circumstances special consideration",
+        "extension": "deadline extension late submission coursework",
+        "exam": "examination assessment test",
+        "enrol": "enrolment enrollment registration register",
+        "wellbeing": "welfare mental health counselling support",
+        "fees": "tuition payment finance funding",
+        "transcript": "academic record certificate grades",
+        "module": "course unit subject",
+        "programme": "program degree course of study",
+        "ID card": "identity card student card campus card",
+        "submit": "submission hand in upload",
+        "defer": "deferral postpone delay",
+        "appeal": "complaint review reconsideration",
+        "graduation": "degree ceremony completing studies",
+        "accommodation": "housing halls residence",
+        "visa": "immigration tier 4 student visa sponsorship",
+        "library": "learning resources study space",
+        "timetable": "schedule class times lectures",
+    }
+
+    expanded = query
+    query_lower = query.lower()
+    for term, synonyms in expansions.items():
+        if term in query_lower:
+            expanded = expanded + " " + synonyms
+
+    return expanded
 
 def search(query, top_k=5, threshold=0.35):
     """
@@ -85,7 +115,8 @@ def search(query, top_k=5, threshold=0.35):
     if _index is None or _chunks is None:
         load_faiss_index()
 
-    query_vec = embed_texts([query])
+    expanded = _expand_query(query)
+    query_vec = embed_texts([expanded])
     scores, indices = _index.search(query_vec, top_k)
 
     results = []
