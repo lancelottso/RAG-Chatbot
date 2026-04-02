@@ -88,6 +88,30 @@ def _generate_huggingface(query, chunks):
     )
     return response.choices[0].message.content
 
+#Tested two-step summarisation, but did not work as evaluation showed the average recall to be much less.
+#Likely due to the free LLM.
+def _summarise_response(answer):
+    """Clean up a long answer by removing repetition while keeping all key details."""
+    from huggingface_hub import InferenceClient
+    import os
+
+    client = InferenceClient(token=os.getenv("HUGGINGFACEHUB_API_TOKEN"))
+
+    messages = [
+        {"role": "system", "content": "Rewrite the following response to be clearer and more organised. Remove any repetition or redundant information, but keep ALL important details, steps, names, and instructions. Do not remove any factual content. The response should be shorter than the original but still comprehensive."},
+        {"role": "user", "content": answer},
+    ]
+
+    try:
+        response = client.chat_completion(
+            messages=messages,
+            model="HuggingFaceH4/zephyr-7b-beta",
+            max_tokens=1024,
+            temperature=0.3,
+        )
+        return response.choices[0].message.content
+    except Exception:
+        return answer
 
 def _generate_openai(query, chunks):
     """Call OpenAI (needs OPENAI_API_KEY in .env)."""
