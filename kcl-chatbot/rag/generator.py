@@ -15,7 +15,8 @@ RULES:
 6. Where relevant, mention the source page so the student can find more detail.
 7. Do NOT make up information not present in the context.
 8. Do NOT answer questions unrelated to KCL Student Services.
-9. Keep your tone friendly and clear."""
+9. Keep your tone friendly and clear.
+10. If the context is limited, give a short answer based only on what is available. Do NOT pad your response with general advice or information not found in the context."""
 
 
 def _build_prompt(query, context_chunks):

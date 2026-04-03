@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from rag.generator import generate_response
 
 sys.path.insert(0, os.path.dirname(__file__))
 from rag import answer_query
@@ -101,6 +102,50 @@ def _compare_answers(generated, reference):
 
     return {"jaccard": round(jaccard, 3), "recall": round(recall, 3)}
 
+def _check_faithfulness(answer, chunks):
+    """
+    Check what proportion of the answer's content words appear in the retrieved chunks.
+    A high score means the answer is grounded in the context (faithful).
+    A low score suggests the LLM may be hallucinating.
+    """
+    if not chunks or not answer.strip():
+        return {"faithfulness": 0.0}
+
+    stop_words = {"the", "a", "an", "is", "are", "was", "were", "be", "been",
+                  "being", "have", "has", "had", "do", "does", "did", "will",
+                  "would", "could", "should", "may", "might", "shall", "can",
+                  "to", "of", "in", "for", "on", "with", "at", "by", "from",
+                  "as", "into", "through", "during", "before", "after", "and",
+                  "but", "or", "nor", "not", "so", "yet", "if", "then", "than",
+                  "that", "this", "these", "those", "it", "its", "you", "your",
+                  "i", "my", "we", "our", "they", "their", "he", "she", "his",
+                  "her", "what", "which", "who", "whom", "how", "when", "where",
+                  "why", "all", "each", "every", "both", "few", "more", "most",
+                  "other", "some", "such", "no", "only", "own", "same", "about",
+                  "also", "just", "please", "here", "there", "very", "well",
+                  "based", "following", "help", "need", "want", "like", "make",
+                  "know", "see", "get", "go", "come", "take", "give", "find",
+                  "think", "say", "tell", "ask", "use", "try", "keep", "let",
+                  "begin", "seem", "show", "hear", "play", "run", "move", "live"}
+
+    # Combine all chunk text into one set of words
+    context_words = set()
+    for c in chunks:
+        context_words.update(c["text"].lower().split())
+    context_words -= stop_words
+
+    # Get answer words
+    answer_words = set(answer.lower().split()) - stop_words
+
+    if not answer_words:
+        return {"faithfulness": 0.0}
+
+    # What proportion of answer words appear in the context?
+    grounded = answer_words & context_words
+    faithfulness = len(grounded) / len(answer_words)
+
+    return {"faithfulness": round(faithfulness, 3)}
+
 def run_evaluation():
     print(f"\n{'='*60}")
     print(f"KCL RAG Chatbot — Evaluation Run ({datetime.now().isoformat()})")
@@ -113,7 +158,9 @@ def run_evaluation():
         print(f"[{i}/{len(BENCHMARK_QUERIES)}] {query}")
 
         start = time.time()
-        result = answer_query(query)
+        from rag.embedder import search
+        chunks = search(query)
+        result = generate_response(query, chunks)
         elapsed = time.time() - start
 
         scores = result["retrieval_scores"]
@@ -123,6 +170,7 @@ def run_evaluation():
         # Compare against reference answer
         ref = bq.get("reference_answer", "")
         similarity = _compare_answers(result["answer"], ref)
+        faithfulness = _check_faithfulness(result["answer"], chunks)
 
         entry = {
             "query": query,
@@ -133,11 +181,12 @@ def run_evaluation():
             "answer_length": len(result["answer"]),
             "latency_s": round(elapsed, 2),
             "similarity": similarity,
+            "faithfulness": faithfulness["faithfulness"],
         }
         
         results.append(entry)
         sim_str = f"jaccard={similarity['jaccard']:.2f}  recall={similarity['recall']:.2f}" if similarity else "n/a"
-        print(f"  top={top_score:.3f}  {sim_str}  latency={elapsed:.1f}s\n")
+        print(f"  top={top_score:.3f}  {sim_str}  faithful={faithfulness['faithfulness']:.2f}  latency={elapsed:.1f}s\n")
 
     # Summary
     in_domain = [r for r in results if r["expected_topic"] != "__out_of_domain__"]
@@ -149,6 +198,7 @@ def run_evaluation():
     avg_jaccard = sum(s["jaccard"] for s in sim_results) / len(sim_results) if sim_results else 0
     avg_recall = sum(s["recall"] for s in sim_results) / len(sim_results) if sim_results else 0
     avg_latency = sum(r["latency_s"] for r in results) / len(results) if results else 0
+    avg_faithfulness = sum(r["faithfulness"] for r in in_domain) / len(in_domain) if in_domain else 0
 
     print(f"\n{'─'*60}")
     print("Summary")
@@ -158,6 +208,7 @@ def run_evaluation():
     print(f"  Avg Jaccard sim    : {avg_jaccard:.3f}")
     print(f"  Avg Recall         : {avg_recall:.3f}")
     print(f"  Avg latency        : {avg_latency:.2f}s")
+    print(f"  Avg Faithfulness   : {avg_faithfulness:.3f}")
     print(f"{'─'*60}\n")
 
     os.makedirs("data", exist_ok=True)
