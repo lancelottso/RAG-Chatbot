@@ -128,6 +128,28 @@ def _generate_openai(query, chunks):
     ]
     return llm.invoke(messages).content
 
+def _clean_response(answer):
+    """Remove repetition loops and malformed LLM output."""
+    # Remove [/INST] [/ASS] artifacts
+    answer = answer.replace("[/INST]", "").replace("[/ASS]", "")
+    
+    # Detect repetition: if any sentence appears 3+ times, truncate
+    sentences = answer.split(".")
+    seen = {}
+    clean = []
+    for s in sentences:
+        s_stripped = s.strip().lower()
+        if not s_stripped:
+            continue
+        seen[s_stripped] = seen.get(s_stripped, 0) + 1
+        if seen[s_stripped] <= 2:
+            clean.append(s.strip())
+    
+    result = ". ".join(clean)
+    if result and not result.endswith("."):
+        result += "."
+    
+    return result if result else answer
 
 def generate_response(query, chunks):
     """
@@ -140,6 +162,7 @@ def generate_response(query, chunks):
         answer = _generate_openai(query, chunks)
     elif provider == "huggingface":
         answer = _generate_huggingface(query, chunks)
+        answer = _clean_response(answer)
     else:
         answer = _generate_local(query, chunks)
 

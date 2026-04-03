@@ -76,6 +76,21 @@ def _extract_content(soup):
     headings = [_clean_text(h.get_text()) for h in main.find_all(re.compile(r"^h[1-6]$"))]
     body = _clean_text(main.get_text())
 
+    # Remove common KCL page junk
+    junk_patterns = [
+        r"Keywords:.*?(?=\n|$)",
+        r"Related Articles\s*\(\d+\).*?(?=\n|$)",
+        r"Comments\s*\(\d+\).*?(?=\n|$)",
+        r"Can't find your answer\?.*?(?=\n|$)",
+        r"Was this article helpful\?.*?(?=\n|$)",
+        r"Provide us some feedback here.*?(?=\n|$)",
+        r"Get in touch via our contact form.*?(?=\n|$)",
+        r"Email:.*?(?=\n|$)",
+    ]
+    for pattern in junk_patterns:
+        body = re.sub(pattern, "", body, flags=re.IGNORECASE)
+    body = _clean_text(body)
+
     return {"title": title, "headings": headings, "body": body}
 
 
