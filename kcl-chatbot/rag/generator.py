@@ -16,7 +16,8 @@ RULES:
 7. Do NOT make up information not present in the context.
 8. Do NOT answer questions unrelated to KCL Student Services.
 9. Keep your tone friendly and clear.
-10. If the context is limited, give a short answer based only on what is available. Do NOT pad your response with general advice or information not found in the context."""
+10. If the context is limited, give a short answer based only on what is available. Do NOT pad your response with general advice or information not found in the context.
+11. Do NOT respond with questions. Do NOT rephrase the student's question. Start your response with the answer directly."""
 
 
 def _build_prompt(query, context_chunks):
@@ -129,27 +130,67 @@ def _generate_openai(query, chunks):
     return llm.invoke(messages).content
 
 def _clean_response(answer):
-    """Remove repetition loops and malformed LLM output."""
-    # Remove [/INST] [/ASS] artifacts
-    answer = answer.replace("[/INST]", "").replace("[/ASS]", "")
+    """Remove LLM artifacts, formatting junk, and repetition loops."""
+    import re
     
-    # Detect repetition: if any sentence appears 3+ times, truncate
-    sentences = answer.split(".")
-    seen = {}
+    # Remove common LLM artifacts
+    answer = answer.replace("[/INST]", "").replace("[/ASS]", "").replace("[/STU]", "").replace("[/USER]", "")
+    
+    # Remove [Source: ...] references
+    answer = re.sub(r"\[Source:.*?\]", "", answer)
+    
+    # Remove lines starting with "Passage:" or "Context:" or "Answer:"
+    lines = answer.split("\n")
+    lines = [l for l in lines if not l.strip().startswith(("Passage:", "Context:", "Answer:"))]
+    answer = "\n".join(lines)
+    
+    # Remove --- separators
+    answer = answer.replace("---", "")
+    
+    # Remove unicode zero-width characters
+    answer = re.sub(r'[\u200b\u200c\u200d\uFEFF]', '', answer)
+    
+    # Remove repetition loops
+    sentences = answer.replace("?", "?.").replace("!", "!.").split(".")
+    seen = set()
     clean = []
     for s in sentences:
         s_stripped = s.strip().lower()
-        if not s_stripped:
+        if not s_stripped or len(s_stripped) < 10:
             continue
-        seen[s_stripped] = seen.get(s_stripped, 0) + 1
-        if seen[s_stripped] <= 2:
+        is_duplicate = False
+        for prev in seen:
+            s_words = set(s_stripped.split())
+            p_words = set(prev.split())
+            if not s_words:
+                continue
+            overlap = len(s_words & p_words) / len(s_words)
+            if overlap > 0.7:
+                is_duplicate = True
+                break
+        if not is_duplicate:
             clean.append(s.strip())
+            seen.add(s_stripped)
+    
+    # Remove leading questions
+    first_answer = 0
+    for i, s in enumerate(clean):
+        if not s.endswith("?"):
+            first_answer = i
+            break
+    clean = clean[first_answer:]
     
     result = ". ".join(clean)
-    if result and not result.endswith("."):
+    if result and not result.endswith(".") and not result.endswith("?"):
         result += "."
     
-    return result if result else answer
+    # Clean up whitespace
+    result = re.sub(r"\s+", " ", result).strip()
+    
+    if len(result) < 50:
+        return "I found some relevant information but couldn't generate a clear answer. Please visit https://self-service.kcl.ac.uk/ or contact Student Services directly."
+    
+    return result
 
 def generate_response(query, chunks):
     """
@@ -161,8 +202,13 @@ def generate_response(query, chunks):
     if provider == "openai":
         answer = _generate_openai(query, chunks)
     elif provider == "huggingface":
-        answer = _generate_huggingface(query, chunks)
-        answer = _clean_response(answer)
+        if not chunks:
+            answer = ("I'm sorry, I couldn't find any relevant information for your query "
+                      "in the KCL Student Services knowledge base. Please try rephrasing "
+                      "your question or contact Student Services directly.")
+        else:
+            answer = _generate_huggingface(query, chunks)
+            answer = _clean_response(answer)
     else:
         answer = _generate_local(query, chunks)
 
