@@ -19,20 +19,6 @@ RULES:
 10. If the context is limited, give a short answer based only on what is available. Do NOT pad your response with general advice or information not found in the context.
 11. Do NOT respond with questions. Do NOT rephrase the student's question. Start your response with the answer directly."""
 
-
-def _build_prompt(query, context_chunks):
-    """Assemble the full prompt with system instructions and retrieved context."""
-    context_block = "\n\n---\n\n".join(
-        f"[Source: {c['page_title']}]\n{c['text']}" for c in context_chunks
-    )
-    return (
-        f"{SYSTEM_PROMPT}\n\n"
-        f"=== CONTEXT ===\n{context_block}\n\n"
-        f"=== STUDENT QUESTION ===\n{query}\n\n"
-        f"=== YOUR ANSWER ==="
-    )
-
-
 def _generate_local(query, chunks):
     """
     Extractive fallback — no API key needed.
@@ -115,20 +101,6 @@ def _summarise_response(answer):
     except Exception:
         return answer
 
-def _generate_openai(query, chunks):
-    """Call OpenAI (needs OPENAI_API_KEY in .env)."""
-    from langchain_community.chat_models import ChatOpenAI
-    from langchain.schema import HumanMessage, SystemMessage
-    llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3, max_tokens=512)
-    context_block = "\n\n---\n\n".join(
-        f"[Source: {c['page_title']}]\n{c['text']}" for c in chunks
-    )
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=f"Context:\n{context_block}\n\nQuestion: {query}"),
-    ]
-    return llm.invoke(messages).content
-
 def _clean_response(answer):
     """Remove LLM artifacts, formatting junk, and repetition loops."""
     import re
@@ -199,9 +171,7 @@ def generate_response(query, chunks):
     """
     provider = LLM_PROVIDER
 
-    if provider == "openai":
-        answer = _generate_openai(query, chunks)
-    elif provider == "huggingface":
+    if provider == "huggingface":
         if not chunks:
             answer = ("I'm sorry, I couldn't find any relevant information for your query "
                       "in the KCL Student Services knowledge base. Please try rephrasing "

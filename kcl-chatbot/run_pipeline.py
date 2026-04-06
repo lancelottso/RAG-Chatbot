@@ -44,7 +44,7 @@ def main():
     print(f"  Pages scraped : {len(pages)}")
     print(f"  Chunks created: {len(chunks)}")
     print(f"  FAISS index   : {FAISS_INDEX_PATH}.index")
-    print(f"\nStart the chatbot:  python3 app.py")
+    print(f"\nStart the chatbot:  python3 chatbot.py")
     print(f"{'='*60}")
 
 
