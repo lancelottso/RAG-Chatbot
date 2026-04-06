@@ -15,7 +15,7 @@ pip install -r requirements.txt
 
 ### 2. Create a `.env` file
 ```
-FLASK_SECRET_KEY=change-this-to-a-random-secret-key
+FLASK_SECRET_KEY=your_secret_key_here
 FLASK_DEBUG=True
 KCL_BASE_URL=https://self-service.kcl.ac.uk/
 MAX_PAGES=200
@@ -80,3 +80,12 @@ Or run one at a time: `chunk_geometry`, `info_volume`, `query_expansion`, `simil
 - sentence-transformers / all-MiniLM-L6-v2 (embeddings)
 - FAISS (vector search)
 - HuggingFace Inference API / Zephyr-7B-beta (LLM)
+
+## Notes
+
+The chatbot supports two LLM modes:
+
+- **`huggingface`** — uses Zephyr-7B via HuggingFace Inference API for natural language responses. Quality is limited by the free-tier model.
+- **`local`** — extractive fallback that returns retrieved chunks directly. More accurate and faithful but less conversational.
+
+The retrieval pipeline (scraper, chunker, FAISS, query expansion) is the same in both modes. Switch between them by changing `LLM_PROVIDER` in `.env`.
