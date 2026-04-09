@@ -7,7 +7,7 @@ from collections import deque
 from urllib.parse import urljoin, urlparse
 
 import requests
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup, Comment, NavigableString
 from tqdm import tqdm
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -24,6 +24,9 @@ def _is_valid_url(url, base_domain):
     skip_ext = (".pdf", ".png", ".jpg", ".jpeg", ".gif", ".svg",
                 ".css", ".js", ".zip", ".xlsx", ".docx", ".pptx")
     if any(parsed.path.lower().endswith(ext) for ext in skip_ext):
+        return False
+    # Skip category index pages - they contain only lists of question links, no actual content
+    if "/category/" in parsed.path:
         return False
     return True
 
@@ -72,6 +75,17 @@ def _extract_content(soup):
 
     if main is None:
         return {"title": title, "headings": [], "body": ""}
+
+    # Handle collapsible Q&A panels by formatting them clearly
+    # This prevents the LLM from seeing a jumble of questions mixed with answers
+    for panel in main.find_all("section", class_="collapsible_panel"):
+        title_div = panel.find("div", class_="collapsible_panel_title")
+        body_div = panel.find("div", class_="collapsible_panel_body")
+        if title_div and body_div:
+            title_text = _clean_text(title_div.get_text())
+            body_text = _clean_text(body_div.get_text())
+            replacement = NavigableString(f" Question: {title_text} Answer: {body_text} ")
+            panel.replace_with(replacement)
 
     headings = [_clean_text(h.get_text()) for h in main.find_all(re.compile(r"^h[1-6]$"))]
     body = _clean_text(main.get_text())

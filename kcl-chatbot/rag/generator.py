@@ -113,7 +113,7 @@ def _clean_response(answer):
     
     # Remove lines starting with "Passage:" or "Context:" or "Answer:"
     lines = answer.split("\n")
-    lines = [l for l in lines if not l.strip().startswith(("Passage:", "Context:", "Answer:"))]
+    lines = [l for l in lines if not l.strip().startswith(("Passage:", "Context:"))]
     answer = "\n".join(lines)
     
     # Remove --- separators
