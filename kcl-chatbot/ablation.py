@@ -35,8 +35,7 @@ from rag.chunker import chunk_pages, save_chunks
 from rag.embedder import build_faiss_index, load_faiss_index, embed_texts, search, _expand_query
 from rag.generator import generate_response
 
-# ── Benchmark Queries (core set for ablation) ────────────────────────────────
-
+# Benchmark Queries (core set for ablation)
 CORE_QUERIES = [
     {
         "query": "How do I apply for extenuating circumstances?",
@@ -160,8 +159,7 @@ def _run_queries(queries, use_expansion=True):
     }
 
 
-# ── Study 1: Chunk Geometry ──────────────────────────────────────────────────
-
+# Chunk Geometry
 def study_chunk_geometry():
     """Test different chunk sizes and overlaps."""
     print("\n" + "=" * 60)
@@ -228,8 +226,7 @@ def study_chunk_geometry():
     return results
 
 
-# ── Study 2: Info Volume (TOP_K × max_tokens) ────────────────────────────────
-
+# Info Volume
 def study_info_volume():
     """Test different TOP_K and max_tokens values."""
     print("\n" + "=" * 60)
@@ -327,8 +324,7 @@ def study_info_volume():
     return results
 
 
-# ── Study 3: Query Expansion ─────────────────────────────────────────────────
-
+# Query Expansion
 def study_query_expansion():
     """Test query expansion on vs off."""
     print("\n" + "=" * 60)
@@ -380,8 +376,7 @@ def study_query_expansion():
     return results
 
 
-# ── Study 4: Similarity Threshold ────────────────────────────────────────────
-
+# Similarity Threshold
 def study_similarity_threshold():
     """Test different similarity thresholds for filtering results."""
     print("\n" + "=" * 60)
@@ -471,8 +466,7 @@ def study_similarity_threshold():
     return results
 
 
-# ── Study 5: Heading Bias ────────────────────────────────────────────────────
-
+# Heading Bias
 def study_heading_bias():
     """Test whether prepending headings to chunks helps retrieval."""
     print("\n" + "=" * 60)
@@ -575,8 +569,7 @@ def study_heading_bias():
     return results
 
 
-# ── Study 6: Temperature ─────────────────────────────────────────────────────
-
+# Study 6
 def study_temperature():
     """Test different LLM temperature values."""
     print("\n" + "=" * 60)
@@ -671,8 +664,7 @@ def study_temperature():
     return results
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────
-
+# Main 
 def main():
     parser = argparse.ArgumentParser(description="KCL RAG Chatbot — Ablation Studies")
     parser.add_argument("--study", type=str, default="all",
