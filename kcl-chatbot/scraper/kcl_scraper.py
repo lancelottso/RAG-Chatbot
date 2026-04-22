@@ -77,7 +77,7 @@ def _extract_content(soup):
         return {"title": title, "headings": [], "body": ""}
 
     # Handle collapsible Q&A panels by formatting them clearly
-    # This prevents the LLM from seeing a jumble of questions mixed with answers
+    # Prevents the LLM from seeing a jumble of questions mixed with answers
     for panel in main.find_all("section", class_="collapsible_panel"):
         title_div = panel.find("div", class_="collapsible_panel_title")
         body_div = panel.find("div", class_="collapsible_panel_body")
