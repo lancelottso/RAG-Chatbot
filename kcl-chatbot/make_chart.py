@@ -2,7 +2,7 @@ import json
 import matplotlib.pyplot as plt
 
 # Load evaluation results
-with open("data/evaluation_results_attempt15_30benchmarkqueries.json") as f:
+with open("data/evaluation_results_attempt15_30benchmarkqueries.json") as f: # File name can be changed depending on evaluation results
     results = json.load(f)
 
 # Keep only in-domain queries (exclude the capital of France one)
