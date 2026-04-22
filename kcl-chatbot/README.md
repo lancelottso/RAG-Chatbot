@@ -2,8 +2,6 @@
 
 A chatbot that answers student queries about KCL Student Services. It scrapes content from the KCL self-help website, stores it in a vector database, and uses an LLM to generate answers.
 
-Built as part of my BSc Computer Science Individual Project at King's College London.
-
 ## How to run
 
 ### 1. Set up
