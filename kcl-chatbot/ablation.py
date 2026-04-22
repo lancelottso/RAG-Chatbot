@@ -1,5 +1,5 @@
 """
-ablation.py — Ablation study framework for the KCL RAG Chatbot.
+Ablation Study Framework
 
 Tests different configurations systematically and records results
 for comparison. Supports testing:
