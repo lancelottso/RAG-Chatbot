@@ -1,8 +1,3 @@
-"""
-config.py — Centralised configuration loaded from .env file.
-All other modules import settings from here.
-"""
-
 import os
 from dotenv import load_dotenv
 
